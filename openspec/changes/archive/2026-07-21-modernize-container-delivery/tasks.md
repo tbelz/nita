@@ -5,10 +5,10 @@
 
 ## 2. Component Images
 
-- [ ] 2.1 Implement and smoke-test the amd64/arm64 workflow for `nita-ansible`.
-- [ ] 2.2 Make the Jenkins build consume BuildKit `TARGETARCH`, remove host guessing, and implement its amd64/arm64 workflow and smoke tests.
-- [ ] 2.3 Implement and smoke-test the amd64/arm64 workflow for `nita-robot`.
-- [ ] 2.4 Remove the Webapp ARM dependency mutation, correct OCI source metadata, and implement its amd64/arm64 workflow and smoke tests.
+- [x] 2.1 Implement and smoke-test the amd64/arm64 workflow for `nita-ansible`.
+- [x] 2.2 Make the Jenkins build consume BuildKit `TARGETARCH`, remove host guessing, and implement its amd64/arm64 workflow and smoke tests.
+- [x] 2.3 Implement and smoke-test the amd64/arm64 workflow for `nita-robot`.
+- [x] 2.4 Remove the Webapp ARM dependency mutation, correct OCI source metadata, and implement its amd64/arm64 workflow and smoke tests.
 
 ## 3. NITA Integration
 
@@ -23,12 +23,12 @@
 - [x] 4.1 Run OpenSpec validation, unit/regression tests, shell and Python checks, YAML/Kubernetes schema validation, and workflow linting.
 - [x] 4.2 Build and smoke-test all four component images and Junos MCP natively on the local ARM Docker host.
 - [x] 4.3 Exercise per-platform digest publication and manifest assembly against a temporary local registry and verify both required platforms.
-- [ ] 4.4 Deploy locally built images through the override interface to a new isolated Kind cluster, run rollout, database, HTTP, Jenkins RBAC, worker, and API integration checks, then remove only temporary test resources.
+- [x] 4.4 Deploy locally built images through the override interface to a new isolated Kind cluster, run rollout, database, HTTP, Jenkins RBAC, worker, and API integration checks, then remove only temporary test resources.
 
 ## 5. Fork Validation and Delivery
 
-- [ ] 5.1 Enable Actions in the five `tbelz` forks and verify component branch runs validate both architectures without creating personal GHCR packages.
-- [ ] 5.2 Verify the NITA fork's x86 CI deploys canonical public Juniper images and record the upstream-only dependency for ARM CI.
-- [ ] 5.3 Commit and push the five focused branches without creating Juniper pull requests.
-- [ ] 5.4 Prepare ready-to-paste titles, bodies, issue references, validation evidence, merge ordering, and maintainer handoff notes for all five pull requests.
-- [ ] 5.5 Sync the delta specifications into the main OpenSpec specifications and archive the completed `modernize-container-delivery` change.
+- [x] 5.1 Enable Actions in the five `tbelz` forks and verify component branch runs validate both architectures without creating personal GHCR packages.
+- [x] 5.2 Verify the NITA fork's x86 CI deploys canonical public Juniper images and record the upstream-only dependency for ARM CI.
+- [x] 5.3 Commit and push the five focused branches without creating Juniper pull requests.
+- [x] 5.4 Prepare ready-to-paste titles, bodies, issue references, validation evidence, merge ordering, and maintainer handoff notes for all five pull requests.
+- [x] 5.5 Sync the delta specifications into the main OpenSpec specifications and archive the completed `modernize-container-delivery` change.

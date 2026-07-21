@@ -3,9 +3,7 @@
 ## Purpose
 Automated installation of the full NITA platform onto a supported Linux host,
 including all system dependencies, Kubernetes, and pod images.
-
 ## Requirements
-
 ### Requirement: Supported Operating Systems
 The system SHALL support installation on Ubuntu 22.04 LTS and AlmaLinux 9.3 Server.
 
@@ -39,8 +37,7 @@ dependencies, Kubernetes, NITA pods, optional MCP server) and accept y/n/q answe
 - THEN the script exits immediately without further changes
 
 ### Requirement: Environment Variable Overrides
-The installer SHALL respect environment variables set in the parent shell to
-override default installation paths and configuration.
+The installer SHALL respect environment variables set in the parent shell to override default installation paths, registry configuration, and complete component image references. Complete image overrides SHALL accept independent tags or immutable digests.
 
 #### Scenario: Custom install root
 - GIVEN `NITAROOT=/srv` is exported before running install.sh
@@ -52,6 +49,16 @@ override default installation paths and configuration.
 - WHEN the installer runs
 - THEN `nita-cmd` and CLI scripts are installed to `/usr/bin`
 
+#### Scenario: Default public image references
+- **GIVEN** no registry or image variables are exported
+- **WHEN** the installer prepares Kubernetes manifests
+- **THEN** `CONTAINER_REGISTRY` is `ghcr.io/juniper`, `GITHUB_ORG` is `Juniper`, and every NITA image override resolves to its canonical `:latest` image
+
+#### Scenario: Independent immutable component selection
+- **GIVEN** one or more of `NITA_WEBAPP_IMAGE`, `NITA_JENKINS_IMAGE`, `NITA_ANSIBLE_IMAGE`, `NITA_ROBOT_IMAGE`, and `JUNOS_MCP_IMAGE` contain complete digest references
+- **WHEN** the installer prepares Kubernetes manifests
+- **THEN** each provided reference is preserved verbatim and components without an override retain their canonical defaults
+
 ### Requirement: Minimum Hardware
 The system SHALL require at least 8 GB of free memory and 20 GB of free storage.
 
@@ -61,14 +68,12 @@ The system SHALL require at least 8 GB of free memory and 20 GB of free storage.
 - THEN a warning is displayed and the installer pauses for confirmation
 
 ### Requirement: Optional Junos MCP Server
-The installer SHALL offer to deploy a Junos MCP server pod on port 8090 as an
-optional component.
+The installer SHALL offer to deploy a Junos MCP server pod on port 8090 as an optional component using the selected `JUNOS_MCP_IMAGE` reference.
 
 #### Scenario: MCP server accepted
 - GIVEN the user answers y to the MCP server prompt
 - WHEN the installer runs
-- THEN the junos-mcp-server repository is cloned, a Docker image is built,
-  imported into containerd, and the pod is deployed in the nita namespace
+- THEN the selected Junos MCP image is deployed in the nita namespace
 
 #### Scenario: MCP server declined
 - GIVEN the user answers n to the MCP server prompt
@@ -83,3 +88,10 @@ variable is set to true.
 - GIVEN `DEBUG=true` is exported in the parent shell
 - WHEN install.sh is run
 - THEN each installation step prints additional trace output to stdout
+
+### Requirement: ARM host installation boundary
+The installer SHALL warn when it is run on an architecture for which full host installation is not officially supported, even though the NITA workload images support ARM Kubernetes operation.
+
+#### Scenario: ARM Linux host starts installation
+- **WHEN** `install.sh` detects an ARM Linux host
+- **THEN** it displays the existing unsupported-architecture warning unless warnings are explicitly ignored
