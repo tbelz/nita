@@ -72,8 +72,9 @@ proxy on ports 443 (HTTPS) and 8000 within the cluster.
 - THEN a valid HTTP response is returned
 
 ### Requirement: Optional Junos MCP Pod
-The system MAY deploy an optional `junos-mcp-server` pod in the nita namespace
-listening on port 8090, controlled by a ConfigMap for device mapping.
+The system SHALL support optional deployment of a `junos-mcp-server` pod in the
+nita namespace listening on port 8090, controlled by a ConfigMap for device
+mapping.
 
 #### Scenario: MCP pod deployed
 - GIVEN the junos-mcp-deployment.yaml and junos-mcp-service.yaml are applied

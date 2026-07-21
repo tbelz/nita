@@ -13,6 +13,36 @@ Containers. Almost everything you need to know about the containers used by NITA
 
 NITA is packaged and executed as a series of Docker containers, which communicate with one another via an internal IPv4 subnet. There are four custom containers, one each for Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Nginx and MariaDB. Of the custom containers, Jenkins and the Webapp are persistent (which means that they run continuously) whereas Ansible and Robot are ephemeral (i.e. they are started and stopped as and when required). Using a container based approach allows NITA to be easily packaged, distributed, deployed and run, and it also allows a user to add further custom containers if they wish to expand the functionality of the solution themselves later.
 
+## Image Distribution and Tags
+
+The four NITA component images and optional Junos MCP image are public in the
+`ghcr.io/juniper` namespace. Each current manifest contains native
+`linux/amd64` and `linux/arm64` images. You can inspect a manifest without
+pulling it:
+
+```shell
+docker buildx imagetools inspect ghcr.io/juniper/nita-webapp:latest
+```
+
+The component repositories publish the following tags:
+
+- `latest` for a successful build of upstream `main`;
+- `sha-<short-commit>` as the immutable source-build tag; and
+- the exact Git tag for an intentional release build.
+
+The scheduled Junos MCP publisher instead uses
+`source-<upstream-sha>-run-<workflow-run-id>`. Published images include their
+source label, a BuildKit SBOM, and provenance attestations. HIGH and CRITICAL
+Trivy results are attached to workflow runs as downloadable reports; they are
+report-only while the existing vulnerability baseline is remediated.
+
+`VERSION.txt` remains useful to the application and local build scripts. The
+container workflows do not change it and do not derive published tags from it.
+
+The same manifests can therefore be pulled on x86_64 and ARM64 Kubernetes
+nodes. This does not yet make the complete Linux host installation supported on
+ARM; hosted ARM CI and host installation remain experimental.
+
 # EXAMPLES
 
 There are many ways in which you can control and troubleshoot container operations with NITA, using either the ``nita-cmd`` or ``docker`` commands. This section shows some of the most useful examples that you should know.

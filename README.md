@@ -65,10 +65,43 @@ Environment Variable | Default Value | Meaning
 ``KEYPASS`` | ``nita123`` | Passkey used to create self-signed Jenkins keys
 ``KUBEROOT`` | ``/etc/kubernetes`` | System location for Kubernetes configuration
 ``KUBECONFIG`` | ``$KUBEROOT/admin.conf`` | Location of user's Kubernetes configuration
+``CONTAINER_REGISTRY`` | ``ghcr.io/juniper`` | Registry namespace used to construct default NITA image references
+``GITHUB_ORG`` | ``Juniper`` | GitHub organization used when cloning NITA repositories and configuration
+``NITA_WEBAPP_IMAGE`` | ``ghcr.io/juniper/nita-webapp:latest`` | Complete Webapp image reference; a tag or digest is accepted
+``NITA_JENKINS_IMAGE`` | ``ghcr.io/juniper/nita-jenkins:latest`` | Complete Jenkins image reference; a tag or digest is accepted
+``NITA_ANSIBLE_IMAGE`` | ``ghcr.io/juniper/nita-ansible:latest`` | Complete Ansible worker image reference passed into Jenkins
+``NITA_ROBOT_IMAGE`` | ``ghcr.io/juniper/nita-robot:latest`` | Complete Robot worker image reference passed into Jenkins
+``JUNOS_MCP_IMAGE`` | ``ghcr.io/juniper/junos-mcp-server:latest`` | Complete optional Junos MCP image reference
 ``JUNOS_MCP_DEVICES`` | ``$NITAROOT/nita/examples/mcp/devices.json`` | Default device mapping file for optional Junos MCP server pod
-``JUNOS_MCP_REPO`` | ``$NITAROOT/junos-mcp-server`` | Location to clone Junos MCP server repository for local image build
 ``DEBUG`` | unset | Set it to true in the parent shell, to see additional output
 ``IGNORE_WARNINGS`` | unset | Set it to true in the parent shell if you want to install NITA and ignore any important warnings
+
+The five image variables are complete references, not tag fragments. This
+allows components to be selected independently and supports immutable pins:
+
+```shell
+export NITA_WEBAPP_IMAGE=ghcr.io/juniper/nita-webapp:sha-0123456789ab
+export NITA_JENKINS_IMAGE=ghcr.io/juniper/nita-jenkins@sha256:<digest>
+sudo -E ./install.sh
+```
+
+## Container Images and Architectures
+
+Official NITA images are published from the Juniper source repositories to
+GHCR as multi-platform manifests for `linux/amd64` and `linux/arm64`.
+`latest` follows the upstream `main` branch, `sha-<short-commit>` identifies an
+immutable source build, and an intentionally pushed Git tag is published under
+that exact tag. The scheduled Junos MCP image uses
+`source-<upstream-sha>-run-<workflow-run-id>` because its contents follow a
+separate upstream repository. `VERSION.txt` remains application and local-build
+metadata; CI does not edit it or use it to tag images.
+
+The multi-platform images support ARM Kubernetes workloads. The complete NITA
+host installation remains officially tested on x86_64, and `install.sh` retains
+its warning on other host architectures while ARM hosted-runner support remains
+experimental. See [Containers](docs/containers.md) and
+[Custom Containers](docs/custom-containers.md) for image inspection and override
+examples.
 
 ## Optional: Junos MCP Server
 
@@ -82,12 +115,10 @@ Install Junos MCP server pod on port 8090 (y|n|q)? [y]
 
 If you answer ``Y``, the installer will:
 
-1. Clone the Junos MCP server repository from GitHub to ``$JUNOS_MCP_REPO`` (default: ``/opt/junos-mcp-server``)
-2. Build a local Docker image named ``junos-mcp-server:local``
-3. Import the image into Kubernetes' containerd runtime
-4. Create a ConfigMap from the default device mapping file at ``$JUNOS_MCP_DEVICES`` (default: ``/opt/nita/examples/mcp/devices.json``)
-5. Generate an internal MCP token plus an nginx proxy config for lab/demo use
-6. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090
+1. Select ``$JUNOS_MCP_IMAGE`` (default: ``ghcr.io/juniper/junos-mcp-server:latest``)
+2. Create a ConfigMap from the default device mapping file at ``$JUNOS_MCP_DEVICES`` (default: ``/opt/nita/examples/mcp/devices.json``)
+3. Generate an internal MCP token plus an nginx proxy config for lab/demo use
+4. Deploy the MCP server pod and service in the ``nita`` namespace, listening on port 8090; Kubernetes pulls the selected image when needed
 
 For the packaged NITA lab/demo deployment, the MCP backend stays token-protected on loopback inside the pod and an nginx sidecar listens on port 8090, injecting the internal token on behalf of clients. This keeps the upstream MCP server in its supported authenticated mode while allowing off-box demo access without per-user token setup.
 
