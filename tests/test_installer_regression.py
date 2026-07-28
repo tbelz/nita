@@ -129,10 +129,7 @@ class InstallerRegressionTests(unittest.TestCase):
             "envsubst '${JUNOS_MCP_IMAGE}'",
             self.install_text,
         )
-        self.assertIn(
-            "imagePullPolicy: Always",
-            self.junos_mcp_text,
-        )
+        self.assertNotIn("imagePullPolicy:", self.junos_mcp_text)
         self.assertNotIn(
             "kubectl apply -f ${K8SROOT}/junos-mcp-deployment.yaml",
             self.install_text,
