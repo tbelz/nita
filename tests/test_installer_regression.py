@@ -111,6 +111,16 @@ class InstallerRegressionTests(unittest.TestCase):
                 r"image: \$\{CONTAINER_REGISTRY\}/(?:nita-|junos-mcp)",
             )
 
+    def test_installer_renders_optional_junos_mcp_image_before_apply(self):
+        self.assertIn(
+            "envsubst '${JUNOS_MCP_IMAGE}'",
+            self.install_text,
+        )
+        self.assertNotIn(
+            "kubectl apply -f ${K8SROOT}/junos-mcp-deployment.yaml",
+            self.install_text,
+        )
+
     def test_jenkins_receives_worker_image_references(self):
         for variable in ("NITA_ANSIBLE_IMAGE", "NITA_ROBOT_IMAGE"):
             self.assertRegex(

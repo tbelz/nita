@@ -32,11 +32,21 @@ The component repositories publish the following tags:
 - `sha-<short-commit>` as the immutable source-build tag; and
 - the exact Git tag for an intentional release build.
 
+An intentional release Git tag must also satisfy Docker tag syntax: 1-128
+ASCII letters, digits, underscores, periods, or dashes, starting with a letter,
+digit, or underscore. The publisher fails with a clear error for an
+incompatible Git tag rather than silently changing its release identity.
+
 The scheduled Junos MCP publisher instead uses
 `source-<upstream-sha>-run-<workflow-run-id>`. Published images include their
 source label, a BuildKit SBOM, and provenance attestations. HIGH and CRITICAL
 Trivy results are attached to workflow runs as downloadable reports; they are
 report-only while the existing vulnerability baseline is remediated.
+
+Trusted publisher jobs smoke-test and scan the exact per-platform digest they
+push before that digest can be included in a public multi-platform tag. This
+keeps mutable build inputs from making the published image differ from the
+validated image.
 
 `VERSION.txt` remains useful to the application and local build scripts. The
 container workflows do not change it and do not derive published tags from it.

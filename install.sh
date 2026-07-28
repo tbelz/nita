@@ -538,7 +538,9 @@ EOF
         rm -f ${JUNOS_MCP_TOKEN_FILE} ${JUNOS_MCP_PROXY_CONF}
 
         echo "${ME}: Applying Junos MCP server deployment and service"
-        kubectl apply -f ${K8SROOT}/junos-mcp-deployment.yaml
+        envsubst '${JUNOS_MCP_IMAGE}' \
+            < ${K8SROOT}/junos-mcp-deployment.yaml \
+            | kubectl apply -f -
         kubectl apply -f ${K8SROOT}/junos-mcp-service.yaml
 
         echo "${ME}: Junos MCP server pod requested. Service endpoint is available on port 8090 inside namespace nita and on the node IP for unauthenticated lab/demo access."

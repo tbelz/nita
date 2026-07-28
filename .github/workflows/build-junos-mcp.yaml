@@ -152,6 +152,34 @@ jobs:
           cache-from: type=gha,scope=junos-publish-${{ matrix.architecture }}
           cache-to: type=gha,mode=max,scope=junos-publish-${{ matrix.architecture }}
 
+      - name: Smoke-test published platform digest
+        env:
+          PUBLISHED_IMAGE: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+        run: |
+          docker pull "${PUBLISHED_IMAGE}"
+          docker run --rm --entrypoint sh "${PUBLISHED_IMAGE}" -ec '
+            python -c "import jnpr.junos, jxmlease, mcp, ncclient, psutil, uvicorn"
+            test -s /app/jmcp.py
+          '
+
+      - name: Scan published platform digest
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          format: json
+          output: trivy-published-junos-mcp-${{ matrix.architecture }}.json
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Upload published-digest vulnerability report
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: trivy-published-junos-mcp-${{ matrix.architecture }}
+          path: trivy-published-junos-mcp-${{ matrix.architecture }}.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Export digest marker
         run: |
           mkdir -p "${RUNNER_TEMP}/digests"

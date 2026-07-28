@@ -36,7 +36,7 @@ Image validation SHALL verify the executable and packaged runtime assets needed 
 - **THEN** Django and MySQL modules can be imported and the compiled frontend assets are present
 
 ### Requirement: Trusted digest publication
-Component workflows SHALL authenticate and publish only for events in their Juniper source repository on `main` or Git-tag pushes, SHALL push one digest per validated platform, and SHALL assemble those digests into a single multi-platform manifest.
+Component workflows SHALL authenticate and publish only for events in their Juniper source repository on `main` or Git-tag pushes, SHALL push one digest per validated platform, SHALL smoke-test and scan each exact pushed digest, and SHALL assemble only those verified digests into a single multi-platform manifest.
 
 #### Scenario: Main publication
 - **WHEN** a component workflow succeeds for a push to upstream `main`
@@ -45,6 +45,14 @@ Component workflows SHALL authenticate and publish only for events in their Juni
 #### Scenario: Intentional release publication
 - **WHEN** a component workflow succeeds for an upstream Git-tag push
 - **THEN** the manifest is available as the exact Git tag and `sha-<short-commit>` and contains both required platforms
+
+#### Scenario: Published digest verification
+- **WHEN** a trusted platform build pushes a canonical digest
+- **THEN** that exact digest passes the component smoke test and non-blocking HIGH/CRITICAL scan before it is eligible for manifest assembly
+
+#### Scenario: Release tag is not Docker-compatible
+- **WHEN** an upstream Git tag cannot be represented unchanged as a Docker tag
+- **THEN** the workflow reports the incompatible tag and stops before constructing a release manifest
 
 #### Scenario: Untrusted event cannot publish
 - **WHEN** the workflow runs for a pull request, a non-main branch, or a fork repository

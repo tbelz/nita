@@ -93,7 +93,10 @@ repositories to GHCR as multi-platform manifests for `linux/amd64` and
 the corresponding publisher changes land and run on upstream `main`.
 `latest` follows the upstream `main` branch, `sha-<short-commit>` identifies an
 immutable source build, and an intentionally pushed Git tag is published under
-that exact tag. The scheduled Junos MCP image uses
+that exact tag. Release tags must already be valid Docker tags: 1-128 ASCII
+letters, digits, underscores, periods, or dashes, starting with a letter,
+digit, or underscore. The workflow rejects incompatible Git tags instead of
+silently changing them. The scheduled Junos MCP image uses
 `source-<upstream-sha>-run-<workflow-run-id>` because its contents follow a
 separate upstream repository. `VERSION.txt` remains application and local-build
 metadata; CI does not edit it or use it to tag images.
