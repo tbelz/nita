@@ -7,6 +7,8 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions: read-all
+
 # ---------------------------------------------------------------------------
 # JOB 1 — Lint: validate YAML syntax and Kubernetes schemas
 # Fast, zero-cluster, runs on every push.
@@ -38,14 +40,17 @@ jobs:
             k8s/*.yaml
 
       # kubeconform validates against the official Kubernetes OpenAPI schemas.
-      # envsubst resolves ${CONTAINER_REGISTRY} and ${CSRF_TRUSTED_ORIGINS}
-      # before validation so all fields are valid strings.
+      # envsubst resolves complete image references and CSRF origins before
+      # validation so all fields are valid strings.
       # -ignore-missing-schemas skips calico CRDs.
       - name: Kubernetes schema validation
         env:
-          # Resolves to the repo owner's GHCR namespace so forks validate
-          # against their own registry without any config changes.
-          CONTAINER_REGISTRY: ghcr.io/${{ github.repository_owner }}
+          CONTAINER_REGISTRY: ghcr.io/juniper
+          NITA_WEBAPP_IMAGE: ghcr.io/juniper/nita-webapp:latest
+          NITA_JENKINS_IMAGE: ghcr.io/juniper/nita-jenkins:latest
+          NITA_ANSIBLE_IMAGE: ghcr.io/juniper/nita-ansible:latest
+          NITA_ROBOT_IMAGE: ghcr.io/juniper/nita-robot:latest
+          JUNOS_MCP_IMAGE: ghcr.io/juniper/junos-mcp-server:latest
           CSRF_TRUSTED_ORIGINS: "https://localhost,http://localhost"
         run: |
           failed=0
@@ -53,7 +58,8 @@ jobs:
             # calico.yaml is a redirect pointer, not a manifest — skip it
             [[ "${f}" == "k8s/calico.yaml" ]] && continue
             echo "Validating ${f} ..."
-            envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS}' < "${f}" \
+            # shellcheck disable=SC2016
+            envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS} ${NITA_WEBAPP_IMAGE} ${NITA_JENKINS_IMAGE} ${NITA_ANSIBLE_IMAGE} ${NITA_ROBOT_IMAGE} ${JUNOS_MCP_IMAGE}' < "${f}" \
               | kubeconform -strict -ignore-missing-schemas -summary - \
               || failed=1
           done
@@ -64,24 +70,28 @@ jobs:
 # Runs only after lint passes. Uses the same k8s/ manifests as production.
 # ---------------------------------------------------------------------------
   e2e-kind:
-    name: E2E on Kind Cluster
+    name: E2E on Kind (${{ matrix.architecture }})
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.repository == 'Juniper/nita' && vars.NITA_ARM_CI_ENABLED == 'true' && '[{"architecture":"amd64","runner":"ubuntu-24.04"},{"architecture":"arm64","runner":"ubuntu-24.04-arm"}]' || '[{"architecture":"amd64","runner":"ubuntu-24.04"}]') }}
 
     env:
       KEYPASS: nita123
+      CLUSTER_NAME: nita-${{ matrix.architecture }}
+      CONTAINER_REGISTRY: ghcr.io/juniper
+      GITHUB_ORG: Juniper
+      NITA_WEBAPP_IMAGE: ghcr.io/juniper/nita-webapp:latest
+      NITA_JENKINS_IMAGE: ghcr.io/juniper/nita-jenkins:latest
+      NITA_ANSIBLE_IMAGE: ghcr.io/juniper/nita-ansible:latest
+      NITA_ROBOT_IMAGE: ghcr.io/juniper/nita-robot:latest
+      JUNOS_MCP_IMAGE: ghcr.io/juniper/junos-mcp-server:latest
 
     steps:
       - uses: actions/checkout@v6.0.2
-
-      # Set CONTAINER_REGISTRY to the repo owner's GHCR namespace (lowercased).
-      # On the upstream repo this resolves to ghcr.io/aburston; on any fork it
-      # automatically resolves to ghcr.io/<fork-owner>. All images are public.
-      - name: Set container registry
-        run: |
-          echo "CONTAINER_REGISTRY=ghcr.io/$(echo '${{ github.repository_owner }}' \
-            | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
       # gettext-base  — provides envsubst (used by apply-k8s.sh)
       # openjdk-17-jdk — provides keytool (required by setup-configmaps.sh)
@@ -105,7 +115,7 @@ jobs:
       - name: Create Kind cluster
         uses: helm/kind-action@v1.14.0
         with:
-          cluster_name: nita
+          cluster_name: ${{ env.CLUSTER_NAME }}
           config: .github/kind-config.yaml
 
       # Pre-pull images on the Docker daemon then load them directly into the
@@ -113,34 +123,18 @@ jobs:
       - name: Pull and load container images into Kind
         run: |
           images=(
-            "mariadb:10.4.12"
+            "mariadb:10.11"
             "nginx:stable"
-            "${CONTAINER_REGISTRY}/nita-webapp:latest"
-            "${CONTAINER_REGISTRY}/nita-jenkins:latest"
+            "${NITA_WEBAPP_IMAGE}"
+            "${NITA_JENKINS_IMAGE}"
+            "${NITA_ANSIBLE_IMAGE}"
+            "${NITA_ROBOT_IMAGE}"
           )
           for img in "${images[@]}"; do
             echo "==> Pulling ${img}"
             docker pull "${img}"
-            kind load docker-image "${img}" --name nita
+            kind load docker-image "${img}" --name "${CLUSTER_NAME}"
           done
-
-      # Build junos-mcp-server locally from upstream source and load it into
-      # Kind. We build here rather than pulling from GHCR because the image is
-      # only published to a namespace by the separate build-junos-mcp workflow;
-      # on the upstream repo (and on first-time forks) that package may not yet
-      # exist, which would make `docker pull` fail with "denied". Building keeps
-      # the e2e job self-contained. The tag matches the manifest reference
-      # (${CONTAINER_REGISTRY}/junos-mcp-server:latest) and the deployment uses
-      # imagePullPolicy: IfNotPresent, so the loaded image is used as-is.
-      - name: Build and load junos-mcp-server into Kind
-        run: |
-          git clone --depth 1 https://github.com/Juniper/junos-mcp-server.git \
-            /tmp/junos-mcp-server
-          docker build \
-            -t "${CONTAINER_REGISTRY}/junos-mcp-server:latest" \
-            /tmp/junos-mcp-server
-          kind load docker-image \
-            "${CONTAINER_REGISTRY}/junos-mcp-server:latest" --name nita
 
       # Apply resources with no ConfigMap dependencies first:
       # namespace → storage (SC, PVs, PVCs) → RBAC
@@ -163,7 +157,7 @@ jobs:
         run: bash .github/scripts/setup-configmaps.sh
 
       # Apply deployments and services. Notes:
-      #   - webapp/jenkins use ${CONTAINER_REGISTRY} → envsubst required
+      #   - webapp/jenkins use complete image overrides → envsubst required
       #   - webapp also uses ${CSRF_TRUSTED_ORIGINS} → built from hostname/IPs
       #   - jenkins-service.yaml was exported from a live cluster and contains
       #     a hardcoded clusterIP, clusterIPs block, resourceVersion and uid.
@@ -182,10 +176,11 @@ jobs:
           echo "CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}"
 
           kubectl apply -f db-service.yaml
-          envsubst '${CONTAINER_REGISTRY}' < db-deployment.yaml      | kubectl apply -f -
+          kubectl apply -f db-deployment.yaml
 
           kubectl apply -f webapp-service.yaml
-          envsubst '${CONTAINER_REGISTRY} ${CSRF_TRUSTED_ORIGINS}' < webapp-deployment.yaml | kubectl apply -f -
+          # shellcheck disable=SC2016
+          envsubst '${NITA_WEBAPP_IMAGE} ${CSRF_TRUSTED_ORIGINS}' < webapp-deployment.yaml | kubectl apply -f -
 
           # Clean live-cluster metadata from jenkins-service before applying
           sed \
@@ -195,9 +190,10 @@ jobs:
             -e '/  resourceVersion:/d' \
             -e '/  uid:/d' \
             jenkins-service.yaml | kubectl apply -f -
-          envsubst '${CONTAINER_REGISTRY}' < jenkins-deployment.yaml  | kubectl apply -f -
+          # shellcheck disable=SC2016
+          envsubst '${NITA_JENKINS_IMAGE} ${NITA_ANSIBLE_IMAGE} ${NITA_ROBOT_IMAGE}' < jenkins-deployment.yaml | kubectl apply -f -
 
-          envsubst '${CONTAINER_REGISTRY}' < proxy-deployment.yaml    | kubectl apply -f -
+          kubectl apply -f proxy-deployment.yaml
 
       # ---------------------------------------------------------------------------
       # Wait for each deployment to reach the Running/Ready state
@@ -311,6 +307,32 @@ jobs:
             -n nita | grep -q "yes"
           echo "PASS: internal-jenknis-pod can create and delete pods"
 
+      - name: "Test: Ansible worker image"
+        run: |
+          # shellcheck disable=SC2016
+          kubectl run ansible-smoke -n nita \
+            --image="${NITA_ANSIBLE_IMAGE}" \
+            --restart=Never \
+            --command -- sh -ec \
+            'ansible --version && python3 -c "import jnpr.junos, jxmlease, pynetbox, yaml"'
+          kubectl wait pod/ansible-smoke -n nita \
+            --for=jsonpath='{.status.phase}'=Succeeded --timeout=5m
+          kubectl logs pod/ansible-smoke -n nita
+          kubectl delete pod/ansible-smoke -n nita --wait=true
+
+      - name: "Test: Robot worker image"
+        run: |
+          # shellcheck disable=SC2016
+          kubectl run robot-smoke -n nita \
+            --image="${NITA_ROBOT_IMAGE}" \
+            --restart=Never \
+            --command -- sh -ec \
+            'python3 -c "import robot; print(robot.__version__)" && python3 -c "import jnpr.junos, robot, xmltodict, yaml"'
+          kubectl wait pod/robot-smoke -n nita \
+            --for=jsonpath='{.status.phase}'=Succeeded --timeout=5m
+          kubectl logs pod/robot-smoke -n nita
+          kubectl delete pod/robot-smoke -n nita --wait=true
+
       # ---------------------------------------------------------------------------
       # Always print pod status; print logs only on failure
       # ---------------------------------------------------------------------------
@@ -376,17 +398,19 @@ jobs:
           set -o pipefail
           pytest -c pytest-integration.ini --tb=long -v --junitxml=test-results.xml 2>&1 | tee pytest-output.txt
           PYTEST_EXIT=$?
-          echo '## Pytest Results' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          tail -200 pytest-output.txt >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo '## Pytest Results'
+            echo '```'
+            tail -200 pytest-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           exit $PYTEST_EXIT
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: pytest-results
+          name: pytest-results-${{ matrix.architecture }}
           path: |
             test-results.xml
             pytest-output.txt
@@ -394,9 +418,9 @@ jobs:
 
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
-          name: nita-screenshots
+          name: nita-screenshots-${{ matrix.architecture }}
           path: ci-screenshots/
           if-no-files-found: ignore
 

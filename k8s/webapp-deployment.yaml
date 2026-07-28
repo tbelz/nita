@@ -33,7 +33,7 @@ spec:
               value: DEBUG
             - name: CSRF_TRUSTED_ORIGINS
               value: "${CSRF_TRUSTED_ORIGINS}"
-          image: ${CONTAINER_REGISTRY}/nita-webapp:latest
+          image: ${NITA_WEBAPP_IMAGE}
           name: webapp
           readinessProbe:
             tcpSocket:
