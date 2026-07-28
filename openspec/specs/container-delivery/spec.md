@@ -1,7 +1,9 @@
 # container-delivery Specification
 
 ## Purpose
-TBD - created by archiving change modernize-container-delivery. Update Purpose after archive.
+Define how NITA component and Junos MCP images are validated, published, tagged,
+and accompanied by supply-chain evidence across supported CPU architectures.
+
 ## Requirements
 ### Requirement: Native multi-platform validation
 Every component image workflow SHALL build and smoke-test `linux/amd64` on an `ubuntu-24.04` runner and `linux/arm64` on an `ubuntu-24.04-arm` runner for every branch push and pull request.

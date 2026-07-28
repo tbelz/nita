@@ -153,12 +153,16 @@ The Jenkins deployment SHALL receive `NITA_ANSIBLE_IMAGE` and `NITA_ROBOT_IMAGE`
 - **THEN** the workload uses exactly the selected Robot reference
 
 ### Requirement: Architecture-parity integration validation
-Upstream NITA CI SHALL deploy the same rendered manifests on x86 and experimental ARM Kind hosts after canonical component images are multi-platform, verify Ansible and Robot smoke workloads, and run the existing stack integration checks.
+Upstream NITA CI SHALL deploy the same rendered manifests on x86 and, only when the `NITA_ARM_CI_ENABLED` repository variable is `true`, experimental ARM Kind hosts after canonical component images are multi-platform, verify Ansible and Robot smoke workloads, and run the existing stack integration checks.
 
 #### Scenario: x86 fork CI uses public packages
 - **WHEN** NITA CI runs in a personal fork
 - **THEN** the x86 Kind deployment pulls canonical public Juniper images rather than deriving package names from the fork owner
 
 #### Scenario: Upstream ARM stack validation
-- **WHEN** CI runs in the Juniper NITA repository with multi-platform canonical packages available
+- **WHEN** CI runs in the Juniper NITA repository with multi-platform canonical packages available and `NITA_ARM_CI_ENABLED=true`
 - **THEN** the ARM Kind job verifies rollout, database, HTTP, Jenkins RBAC, Ansible, Robot, and API integration behavior
+
+#### Scenario: Canonical packages are not yet ARM-ready
+- **WHEN** `NITA_ARM_CI_ENABLED` is absent or is not `true`
+- **THEN** CI schedules only the x86 Kind job, even in the Juniper NITA repository

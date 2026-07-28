@@ -137,7 +137,7 @@ class InstallerRegressionTests(unittest.TestCase):
             rendered_jenkins,
         )
 
-    def test_fork_ci_uses_canonical_images_and_upstream_arm_runner(self):
+    def test_fork_ci_uses_canonical_images_and_gates_upstream_arm_runner(self):
         workflow = NITA_CI.read_text(encoding="utf-8")
         self.assertNotIn("github.repository_owner", workflow)
         self.assertIn("ghcr.io/juniper/nita-webapp:latest", workflow)
@@ -146,6 +146,7 @@ class InstallerRegressionTests(unittest.TestCase):
         self.assertIn("ghcr.io/juniper/nita-robot:latest", workflow)
         self.assertIn("ubuntu-24.04-arm", workflow)
         self.assertIn("github.repository == 'Juniper/nita'", workflow)
+        self.assertIn("vars.NITA_ARM_CI_ENABLED == 'true'", workflow)
 
     def test_junos_mcp_publisher_is_multiarch_and_upstream_only(self):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")

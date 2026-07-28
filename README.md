@@ -87,8 +87,10 @@ sudo -E ./install.sh
 
 ## Container Images and Architectures
 
-Official NITA images are published from the Juniper source repositories to
-GHCR as multi-platform manifests for `linux/amd64` and `linux/arm64`.
+The component workflows publish official NITA images from the Juniper source
+repositories to GHCR as multi-platform manifests for `linux/amd64` and
+`linux/arm64`. Existing canonical `latest` packages may remain amd64-only until
+the corresponding publisher changes land and run on upstream `main`.
 `latest` follows the upstream `main` branch, `sha-<short-commit>` identifies an
 immutable source build, and an intentionally pushed Git tag is published under
 that exact tag. The scheduled Junos MCP image uses
@@ -96,12 +98,14 @@ that exact tag. The scheduled Junos MCP image uses
 separate upstream repository. `VERSION.txt` remains application and local-build
 metadata; CI does not edit it or use it to tag images.
 
-The multi-platform images support ARM Kubernetes workloads. The complete NITA
-host installation remains officially tested on x86_64, and `install.sh` retains
-its warning on other host architectures while ARM hosted-runner support remains
-experimental. See [Containers](docs/containers.md) and
-[Custom Containers](docs/custom-containers.md) for image inspection and override
-examples.
+Once the canonical manifests contain real ARM application images, the
+multi-platform images support ARM Kubernetes workloads. The upstream ARM Kind
+job remains gated until then. The complete NITA host installation remains
+officially tested on x86_64, and `install.sh` retains its warning on other host
+architectures while ARM hosted-runner support remains experimental. See
+[Containers](docs/containers.md) and
+[Custom Containers](docs/custom-containers.md) for image inspection and
+override examples.
 
 ## Optional: Junos MCP Server
 

@@ -87,7 +87,10 @@ verbatim and does not append a registry or tag.
 
 ## Architecture Boundary
 
-The official GHCR images are multi-platform for `linux/amd64` and
-`linux/arm64`, and the Kubernetes stack is tested on both architectures. Full
-host installation on ARM Linux is still experimental; `install.sh` continues
-to warn on non-x86_64 hosts.
+The component workflows produce GHCR manifests for `linux/amd64` and
+`linux/arm64`. Existing canonical packages may remain amd64-only until the
+publisher changes land and run on upstream `main`; inspect the selected
+manifest before scheduling it on ARM. The upstream ARM stack test remains
+gated until all four canonical component packages contain real ARM application
+images. Full host installation on ARM Linux is still experimental;
+`install.sh` continues to warn on non-x86_64 hosts.
