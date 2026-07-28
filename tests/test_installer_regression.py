@@ -11,6 +11,15 @@ JENKINS_DEPLOYMENT = ROOT / "k8s" / "jenkins-deployment.yaml"
 JUNOS_MCP_DEPLOYMENT = ROOT / "k8s" / "junos-mcp-deployment.yaml"
 NITA_CI = ROOT / ".github" / "workflows" / "nita-ci.yaml"
 JUNOS_MCP_CI = ROOT / ".github" / "workflows" / "build-junos-mcp.yaml"
+GENERIC_PROJECT = ROOT / "utils" / "nitaprj" / "profiles" / "generic" / "project.yaml"
+GENERIC_ANSIBLE_JOB = (
+    ROOT
+    / "utils"
+    / "nitaprj"
+    / "profiles"
+    / "generic"
+    / "create_ansible_job_k8s.py"
+)
 
 
 class InstallerRegressionTests(unittest.TestCase):
@@ -20,6 +29,10 @@ class InstallerRegressionTests(unittest.TestCase):
         self.webapp_text = WEBAPP_DEPLOYMENT.read_text(encoding="utf-8")
         self.jenkins_text = JENKINS_DEPLOYMENT.read_text(encoding="utf-8")
         self.junos_mcp_text = JUNOS_MCP_DEPLOYMENT.read_text(encoding="utf-8")
+        self.generic_project_text = GENERIC_PROJECT.read_text(encoding="utf-8")
+        self.generic_ansible_job_text = GENERIC_ANSIBLE_JOB.read_text(
+            encoding="utf-8",
+        )
 
     def test_ubuntu_installs_supported_openjdk_package(self):
         self.assertIn("openjdk-21-jre-headless", self.install_text)
@@ -128,6 +141,24 @@ class InstallerRegressionTests(unittest.TestCase):
                 rf"- name: {variable}\s+value: \"\$\{{{variable}\}}\"",
             )
             self.assertIn(variable, self.apply_text)
+
+    def test_generic_project_uses_jenkins_worker_image_environment(self):
+        self.assertNotIn(
+            "juniper/nita-ansible",
+            self.generic_project_text,
+        )
+        self.assertNotIn(
+            "juniper/nita-robot",
+            self.generic_project_text,
+        )
+        self.assertIn(
+            "NITA_ANSIBLE_IMAGE",
+            self.generic_ansible_job_text,
+        )
+        self.assertIn(
+            "ghcr.io/juniper/nita-ansible:latest",
+            self.generic_ansible_job_text,
+        )
 
     def test_complete_tag_and_digest_examples_remain_verbatim(self):
         rendered_webapp = self.webapp_text.replace(
