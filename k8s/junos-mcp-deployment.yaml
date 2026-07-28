@@ -20,7 +20,7 @@ spec:
       containers:
         - name: junos-mcp
           image: ${JUNOS_MCP_IMAGE}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command: ["python", "jmcp.py"]
           args:
             - "-f"
