@@ -64,6 +64,11 @@ jobs:
           ref: ${{ needs.resolve-source.outputs.source-sha }}
           path: junos-mcp-server
 
+      - name: Ensure a vulnerability policy file exists
+        if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''
+        run: |
+          printf 'vulnerabilities: []\n' > junos-mcp-server/.trivyignore.yaml
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0
 
@@ -87,6 +92,8 @@ jobs:
             python -c "import jnpr.junos, jxmlease, mcp, ncclient, psutil, uvicorn"
             python -m compileall -q /app
             test -s /app/jmcp.py
+            command -v ssh
+            ssh -V
           '
 
       - name: Scan HIGH and CRITICAL vulnerabilities
@@ -153,6 +160,11 @@ jobs:
           ref: ${{ needs.resolve-source.outputs.source-sha }}
           path: junos-mcp-server
 
+      - name: Ensure a vulnerability policy file exists
+        if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''
+        run: |
+          printf 'vulnerabilities: []\n' > junos-mcp-server/.trivyignore.yaml
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0
 
@@ -189,6 +201,8 @@ jobs:
             python -c "import jnpr.junos, jxmlease, mcp, ncclient, psutil, uvicorn"
             python -m compileall -q /app
             test -s /app/jmcp.py
+            command -v ssh
+            ssh -V
           '
 
       - name: Scan published platform digest

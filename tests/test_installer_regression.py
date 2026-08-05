@@ -208,6 +208,10 @@ class InstallerRegressionTests(unittest.TestCase):
             workflow.count("trivyignores: junos-mcp-server/.trivyignore.yaml"),
             4,
         )
+        self.assertEqual(
+            workflow.count("if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''"),
+            2,
+        )
         self.assertIn('TRIVY_SHOW_SUPPRESSED: "true"', workflow)
         self.assertIn("Block unaccepted CRITICAL vulnerabilities", workflow)
         self.assertIn(
