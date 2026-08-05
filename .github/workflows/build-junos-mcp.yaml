@@ -22,6 +22,7 @@ jobs:
     outputs:
       source-repository: ${{ steps.source.outputs.repository }}
       source-sha: ${{ steps.source.outputs.sha }}
+      publishable: ${{ steps.source.outputs.publishable }}
 
     steps:
       - name: Resolve Junos MCP HEAD
@@ -38,8 +39,16 @@ jobs:
             "https://github.com/${SOURCE_REPOSITORY}.git" "${SOURCE_REF}" |
             awk 'NR == 1 {print $1}')"
           [[ "${source_sha}" =~ ^[0-9a-f]{40}$ ]]
-          echo "repository=${SOURCE_REPOSITORY}" >> "${GITHUB_OUTPUT}"
-          echo "sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          publishable=false
+          if [[ "${SOURCE_REPOSITORY}" == "Juniper/junos-mcp-server" &&
+                "${SOURCE_REF}" == "HEAD" ]]; then
+            publishable=true
+          fi
+          {
+            echo "repository=${SOURCE_REPOSITORY}"
+            echo "sha=${source_sha}"
+            echo "publishable=${publishable}"
+          } >> "${GITHUB_OUTPUT}"
 
   validate:
     name: Validate ${{ matrix.platform }}
@@ -136,6 +145,7 @@ jobs:
     needs: [resolve-source, validate]
     if: >-
       github.repository == 'Juniper/nita' &&
+      needs.resolve-source.outputs.publishable == 'true' &&
       (github.event_name == 'schedule' ||
        github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && github.ref == 'refs/heads/main'))
@@ -261,6 +271,7 @@ jobs:
     needs: [resolve-source, publish-platform]
     if: >-
       github.repository == 'Juniper/nita' &&
+      needs.resolve-source.outputs.publishable == 'true' &&
       (github.event_name == 'schedule' ||
        github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && github.ref == 'refs/heads/main'))

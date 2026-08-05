@@ -229,6 +229,20 @@ class InstallerRegressionTests(unittest.TestCase):
             workflow,
         )
 
+    def test_junos_mcp_source_override_cannot_publish(self):
+        workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
+        self.assertIn(
+            '${SOURCE_REPOSITORY}" == "Juniper/junos-mcp-server"',
+            workflow,
+        )
+        self.assertIn('${SOURCE_REF}" == "HEAD"', workflow)
+        self.assertEqual(
+            workflow.count(
+                "needs.resolve-source.outputs.publishable == 'true'"
+            ),
+            2,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

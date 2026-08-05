@@ -37,3 +37,10 @@ Every published component image SHALL include an OCI source label, a BuildKit SB
 #### Scenario: Manifest input fails security gate
 - **WHEN** either platform image fails its blocking CRITICAL scan
 - **THEN** the workflow does not publish a multi-platform manifest from that build
+
+### Requirement: Junos MCP multi-platform publication
+The NITA-owned Junos MCP workflow SHALL permit source repository and ref overrides for validation while publishing only from the canonical `Juniper/junos-mcp-server` `HEAD` source.
+
+#### Scenario: Source override validates without publication
+- **WHEN** the workflow resolves a source repository or ref other than the canonical `Juniper/junos-mcp-server` `HEAD`
+- **THEN** both platforms may validate that source but no platform digest or manifest is published

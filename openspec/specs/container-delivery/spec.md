@@ -100,3 +100,7 @@ The NITA-owned Junos MCP workflow SHALL build amd64 and arm64 images and, on tru
 #### Scenario: Fork Junos workflow runs
 - **WHEN** the Junos workflow is dispatched or pushed in a fork
 - **THEN** it may validate builds but cannot authenticate or publish
+
+#### Scenario: Source override validates without publication
+- **WHEN** the workflow resolves a source repository or ref other than the canonical `Juniper/junos-mcp-server` `HEAD`
+- **THEN** both platforms may validate that source but no platform digest or manifest is published

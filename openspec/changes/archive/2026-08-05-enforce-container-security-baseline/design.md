@@ -42,6 +42,7 @@ Exceptions are considered only after removing unused packages and applying suppo
 - Robot uses a multi-stage Alpine runtime, removes editor/build tooling, and pins direct dependencies. Slim-trixie is the predetermined fallback only if native musl validation fails.
 - Webapp keeps a conservative Debian runtime but separates compilation, updates Django and the npm lock, replaces mutable source downloads, and removes build-only packages. Its database wait loop uses the existing Python driver so the runtime keeps only the MariaDB client library rather than the full CLI and Perl dependency tree.
 - Junos MCP uses its existing `uv.lock` in a minimized Alpine runtime and removes operating-system networking tools not invoked by the service. It retains the OpenSSH client because documented `ssh_config` `ProxyCommand` connections invoke the local `ssh` binary through the NETCONF dependency stack. Slim-trixie is the fallback only if native musl validation fails.
+- Junos MCP source repository and ref overrides are validation-only. Digest and manifest publication additionally requires the canonical `Juniper/junos-mcp-server` repository at its default `HEAD`, preventing temporary fork-validation settings from reaching official packages.
 - Ansible retains its existing Alpine image and receives only the common gate.
 
 ### Gate the exact publishable object
