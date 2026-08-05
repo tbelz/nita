@@ -3,7 +3,6 @@
 ## Purpose
 Define how NITA component and Junos MCP images are validated, published, tagged,
 and accompanied by supply-chain evidence across supported CPU architectures.
-
 ## Requirements
 ### Requirement: Native multi-platform validation
 Every component image workflow SHALL build and smoke-test `linux/amd64` on an `ubuntu-24.04` runner and `linux/arm64` on an `ubuntu-24.04-arm` runner for every branch push and pull request.
@@ -36,7 +35,7 @@ Image validation SHALL verify the executable and packaged runtime assets needed 
 - **THEN** Django and MySQL modules can be imported and the compiled frontend assets are present
 
 ### Requirement: Trusted digest publication
-Component workflows SHALL authenticate and publish only for events in their Juniper source repository on `main` or Git-tag pushes, SHALL push one digest per validated platform, SHALL smoke-test and scan each exact pushed digest, and SHALL assemble only those verified digests into a single multi-platform manifest.
+Component workflows SHALL authenticate and publish only for events in their Juniper source repository on `main` or Git-tag pushes, SHALL push one digest per validated platform, SHALL smoke-test and security-gate each exact pushed digest, and SHALL assemble only those verified digests into a single multi-platform manifest.
 
 #### Scenario: Main publication
 - **WHEN** a component workflow succeeds for a push to upstream `main`
@@ -48,7 +47,7 @@ Component workflows SHALL authenticate and publish only for events in their Juni
 
 #### Scenario: Published digest verification
 - **WHEN** a trusted platform build pushes a canonical digest
-- **THEN** that exact digest passes the component smoke test and non-blocking HIGH/CRITICAL scan before it is eligible for manifest assembly
+- **THEN** that exact digest passes the component smoke test, complete HIGH/CRITICAL reporting, and blocking CRITICAL gate before it is eligible for manifest assembly
 
 #### Scenario: Release tag is not Docker-compatible
 - **WHEN** an upstream Git tag cannot be represented unchanged as a Docker tag
@@ -66,7 +65,7 @@ Component workflows SHALL NOT read, modify, or commit `VERSION.txt` and SHALL de
 - **THEN** `VERSION.txt` is unchanged and no CI-authored source commit is created
 
 ### Requirement: Supply-chain evidence
-Every published component image SHALL include an OCI source label, a BuildKit SBOM, and provenance attestation, and every validation build SHALL produce a downloadable non-blocking Trivy report for HIGH and CRITICAL vulnerabilities.
+Every published component image SHALL include an OCI source label, a BuildKit SBOM, and provenance attestation, and every validation build SHALL produce a downloadable Trivy report for HIGH and CRITICAL vulnerabilities while enforcing the container security baseline.
 
 #### Scenario: Published image can be traced
 - **WHEN** an operator inspects a published platform image or manifest
@@ -74,7 +73,11 @@ Every published component image SHALL include an OCI source label, a BuildKit SB
 
 #### Scenario: Existing vulnerability is reported
 - **WHEN** Trivy detects a HIGH or CRITICAL finding
-- **THEN** the workflow uploads the report and does not fail solely because of that finding in this change series
+- **THEN** the workflow uploads the complete report, keeps accepted findings visible, and fails only when a CRITICAL finding lacks an active package-scoped exception
+
+#### Scenario: Manifest input fails security gate
+- **WHEN** either platform image fails its blocking CRITICAL scan
+- **THEN** the workflow does not publish a multi-platform manifest from that build
 
 ### Requirement: Target-aware build inputs
 Container builds SHALL select architecture-dependent artifacts from BuildKit target metadata and SHALL NOT mutate application dependency files based on the build host architecture.

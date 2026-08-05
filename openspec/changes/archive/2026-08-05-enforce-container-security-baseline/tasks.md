@@ -24,14 +24,14 @@
 ## 4. Validation
 
 - [x] 4.1 Run OpenSpec, workflow, YAML, dependency, unit, and component smoke validation
-- [ ] 4.2 Build and scan the owned images on native ARM and validate amd64/arm64 in fork Actions
-- [ ] 4.3 Exercise the locally built image set in an isolated temporary Kind cluster and clean up only test artifacts
+- [x] 4.2 Build and scan the owned images on native ARM and validate amd64/arm64 in fork Actions
+- [x] 4.3 Exercise the locally built image set in an isolated temporary Kind cluster and clean up only test artifacts
 - [x] 4.4 Confirm accepted findings remain visible and unaccepted or expired CRITICAL findings block delivery
 
 ## 5. Delivery and follow-up
 
-- [ ] 5.1 Make existing meaningful multi-architecture drafts ready and retire the obsolete Webapp mirror
-- [ ] 5.2 Create fork stacks and ready security pull requests with dependency ordering and validation evidence
-- [ ] 5.3 Request and address Codex reviews on the distinctive NITA, Jenkins, Webapp, and Junos MCP fork pull requests
-- [ ] 5.4 Create the deployment-hardening and third-party-runtime follow-up issues and update issue 75
-- [ ] 5.5 Create upstream component pull requests in prerequisite order and hold the NITA integration pull request until canonical images qualify
+- [x] 5.1 Make existing meaningful multi-architecture drafts ready and retire the obsolete Webapp mirror
+- [x] 5.2 Create fork stacks and ready security pull requests with dependency ordering and validation evidence
+- [x] 5.3 Request and address Codex reviews on the distinctive NITA, Jenkins, Webapp, and Junos MCP fork pull requests
+- [x] 5.4 Create the deployment-hardening and third-party-runtime follow-up issues and update issue 75
+- [x] 5.5 Create upstream component pull requests in prerequisite order and hold the NITA integration pull request until canonical images qualify
