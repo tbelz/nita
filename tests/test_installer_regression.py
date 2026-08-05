@@ -204,6 +204,7 @@ class InstallerRegressionTests(unittest.TestCase):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
         self.assertGreaterEqual(workflow.count("version: v0.69.3"), 4)
         self.assertGreaterEqual(workflow.count("skip-setup-trivy: true"), 2)
+        self.assertGreaterEqual(workflow.count("scanners: vuln"), 4)
         self.assertGreaterEqual(
             workflow.count("trivyignores: junos-mcp-server/.trivyignore.yaml"),
             4,
