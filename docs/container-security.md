@@ -38,7 +38,7 @@ binary packages. Raw JSON reports remain the source of record.
 | Image | HIGH | CRITICAL | Accepted CRITICAL CVEs |
 | --- | ---: | ---: | --- |
 | Ansible | 5 | 0 | None |
-| Jenkins | 70 | 18 | CVE-2026-13221, CVE-2026-42496, CVE-2026-57433, CVE-2026-8376, CVE-2026-60002, CVE-2026-6653 |
+| Jenkins | 66 | 18 | CVE-2026-13221, CVE-2026-42496, CVE-2026-57433, CVE-2026-8376, CVE-2026-60002, CVE-2026-6653 |
 | Robot | 6 | 0 | None |
 | Webapp | 29 | 8 | CVE-2026-13221, CVE-2026-42496, CVE-2026-57433, CVE-2026-8376, CVE-2026-44172, CVE-2026-49261 |
 | Junos MCP | 18 | 0 | None |
