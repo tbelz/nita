@@ -202,7 +202,8 @@ class InstallerRegressionTests(unittest.TestCase):
 
     def test_junos_mcp_publisher_enforces_governed_critical_gate(self):
         workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
-        self.assertGreaterEqual(workflow.count("version: v0.66.0"), 4)
+        self.assertGreaterEqual(workflow.count("version: v0.69.3"), 4)
+        self.assertGreaterEqual(workflow.count("skip-setup-trivy: true"), 2)
         self.assertGreaterEqual(
             workflow.count("trivyignores: junos-mcp-server/.trivyignore.yaml"),
             4,
