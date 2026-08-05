@@ -200,6 +200,49 @@ class InstallerRegressionTests(unittest.TestCase):
             workflow,
         )
 
+    def test_junos_mcp_publisher_enforces_governed_critical_gate(self):
+        workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
+        self.assertGreaterEqual(workflow.count("version: v0.69.3"), 4)
+        self.assertGreaterEqual(workflow.count("skip-setup-trivy: true"), 2)
+        self.assertGreaterEqual(workflow.count("scanners: vuln"), 4)
+        self.assertGreaterEqual(
+            workflow.count("trivyignores: junos-mcp-server/.trivyignore.yaml"),
+            4,
+        )
+        self.assertEqual(
+            workflow.count("if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''"),
+            2,
+        )
+        self.assertIn('TRIVY_SHOW_SUPPRESSED: "true"', workflow)
+        self.assertIn("Block unaccepted CRITICAL vulnerabilities", workflow)
+        self.assertIn(
+            "Block unaccepted published CRITICAL vulnerabilities",
+            workflow,
+        )
+
+    def test_junos_mcp_fork_can_validate_an_explicit_source_branch(self):
+        workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
+        self.assertIn("vars.JUNOS_MCP_SOURCE_REPOSITORY", workflow)
+        self.assertIn("vars.JUNOS_MCP_SOURCE_REF", workflow)
+        self.assertIn(
+            "repository: ${{ needs.resolve-source.outputs.source-repository }}",
+            workflow,
+        )
+
+    def test_junos_mcp_source_override_cannot_publish(self):
+        workflow = JUNOS_MCP_CI.read_text(encoding="utf-8")
+        self.assertIn(
+            '${SOURCE_REPOSITORY}" == "Juniper/junos-mcp-server"',
+            workflow,
+        )
+        self.assertIn('${SOURCE_REF}" == "HEAD"', workflow)
+        self.assertEqual(
+            workflow.count(
+                "needs.resolve-source.outputs.publishable == 'true'"
+            ),
+            2,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

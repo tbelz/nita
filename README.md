@@ -110,6 +110,12 @@ architectures while ARM hosted-runner support remains experimental. See
 [Custom Containers](docs/custom-containers.md) for image inspection and
 override examples.
 
+NITA is designed for an isolated, single-operator trusted lab. It is not a
+hardened public or multi-tenant service; do not expose its service ports to an
+untrusted network. See [Container security](docs/container-security.md) for the
+supported deployment boundary, image-scanning policy, and vulnerability
+exception process.
+
 ## Optional: Junos MCP Server
 
 NITA can optionally install a [Junos Model Context Protocol (MCP) server](https://github.com/Juniper/junos-mcp-server) as a Kubernetes pod that runs on port 8090. This MCP server provides a bridge between LLM-compatible clients (such as Claude Desktop or VSCode with GitHub Copilot) and Juniper Junos network devices.
