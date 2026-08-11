@@ -13,6 +13,60 @@ Containers. Almost everything you need to know about the containers used by NITA
 
 NITA is packaged and executed as a series of Docker containers, which communicate with one another via an internal IPv4 subnet. There are four custom containers, one each for Ansible, Jenkins, Robot and the NITA Webapp, and two standard containers for Nginx and MariaDB. Of the custom containers, Jenkins and the Webapp are persistent (which means that they run continuously) whereas Ansible and Robot are ephemeral (i.e. they are started and stopped as and when required). Using a container based approach allows NITA to be easily packaged, distributed, deployed and run, and it also allows a user to add further custom containers if they wish to expand the functionality of the solution themselves later.
 
+## Image Distribution and Tags
+
+The four NITA component images and optional Junos MCP image are public in the
+`ghcr.io/juniper` namespace. The component publisher changes described here
+produce native `linux/amd64` and `linux/arm64` images. Until those changes have
+landed and each canonical package has been rebuilt, an existing `latest`
+manifest may still contain only `linux/amd64`. You can inspect a manifest
+without pulling it:
+
+```shell
+docker buildx imagetools inspect ghcr.io/juniper/nita-webapp:latest
+```
+
+The component repositories publish the following tags:
+
+- `latest` for a successful build of upstream `main`;
+- `sha-<short-commit>` as the immutable source-build tag; and
+- the exact Git tag for an intentional release build.
+
+An intentional release Git tag must also satisfy Docker tag syntax: 1-128
+ASCII letters, digits, underscores, periods, or dashes, starting with a letter,
+digit, or underscore. The publisher fails with a clear error for an
+incompatible Git tag rather than silently changing its release identity.
+
+The scheduled Junos MCP publisher instead uses
+`source-<upstream-sha>-run-<workflow-run-id>`. Published images include their
+source label, a BuildKit SBOM, and provenance attestations. HIGH and CRITICAL
+Trivy results are attached to workflow runs as downloadable reports; they are
+report-only while the existing vulnerability baseline is remediated.
+
+Trusted publisher jobs smoke-test and scan the exact per-platform digest they
+push before that digest can be included in a public multi-platform tag. This
+keeps mutable build inputs from making the published image differ from the
+validated image.
+
+`VERSION.txt` remains useful to the application and local build scripts. The
+container workflows do not change it and do not derive published tags from it.
+
+After a package manifest lists both application platforms, the same reference
+can be pulled on x86_64 and ARM64 Kubernetes nodes. An `unknown/unknown`
+descriptor is supply-chain evidence, not an ARM application image.
+
+The upstream ARM Kind job is disabled by default while the canonical component
+packages remain amd64-only. After all four component manifests contain real
+`linux/arm64` application images, a repository maintainer can set the Actions
+repository variable `NITA_ARM_CI_ENABLED` to `true`. Removing or clearing that
+variable returns CI to x86-only validation. The optional Junos MCP manifest
+must likewise contain both application platforms before claiming ARM parity
+for that workload.
+
+Multi-platform application images do not make the complete Linux host
+installation supported on ARM; hosted ARM CI and host installation remain
+experimental.
+
 # EXAMPLES
 
 There are many ways in which you can control and troubleshoot container operations with NITA, using either the ``nita-cmd`` or ``docker`` commands. This section shows some of the most useful examples that you should know.
