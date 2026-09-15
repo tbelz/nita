@@ -20,16 +20,35 @@ jobs:
     name: Resolve upstream source
     runs-on: ubuntu-24.04
     outputs:
+      source-repository: ${{ steps.source.outputs.repository }}
       source-sha: ${{ steps.source.outputs.sha }}
+      publishable: ${{ steps.source.outputs.publishable }}
 
     steps:
       - name: Resolve Junos MCP HEAD
         id: source
         shell: bash
+        env:
+          SOURCE_REPOSITORY: ${{ vars.JUNOS_MCP_SOURCE_REPOSITORY || 'Juniper/junos-mcp-server' }}
+          SOURCE_REF: ${{ vars.JUNOS_MCP_SOURCE_REF || 'HEAD' }}
         run: |
-          source_sha="$(git ls-remote https://github.com/Juniper/junos-mcp-server.git HEAD | awk '{print $1}')"
+          [[ "${SOURCE_REPOSITORY}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          [[ "${SOURCE_REF}" =~ ^[A-Za-z0-9._/-]+$ ]]
+
+          source_sha="$(git ls-remote --exit-code \
+            "https://github.com/${SOURCE_REPOSITORY}.git" "${SOURCE_REF}" |
+            awk 'NR == 1 {print $1}')"
           [[ "${source_sha}" =~ ^[0-9a-f]{40}$ ]]
-          echo "sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          publishable=false
+          if [[ "${SOURCE_REPOSITORY}" == "Juniper/junos-mcp-server" &&
+                "${SOURCE_REF}" == "HEAD" ]]; then
+            publishable=true
+          fi
+          {
+            echo "repository=${SOURCE_REPOSITORY}"
+            echo "sha=${source_sha}"
+            echo "publishable=${publishable}"
+          } >> "${GITHUB_OUTPUT}"
 
   validate:
     name: Validate ${{ matrix.platform }}
@@ -50,9 +69,14 @@ jobs:
       - name: Checkout Junos MCP source
         uses: actions/checkout@v6.0.2
         with:
-          repository: Juniper/junos-mcp-server
+          repository: ${{ needs.resolve-source.outputs.source-repository }}
           ref: ${{ needs.resolve-source.outputs.source-sha }}
           path: junos-mcp-server
+
+      - name: Ensure a vulnerability policy file exists
+        if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''
+        run: |
+          printf 'vulnerabilities: []\n' > junos-mcp-server/.trivyignore.yaml
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0
@@ -65,7 +89,7 @@ jobs:
           load: true
           tags: ${{ env.TEST_IMAGE }}
           labels: |
-            org.opencontainers.image.source=https://github.com/Juniper/junos-mcp-server
+            org.opencontainers.image.source=https://github.com/${{ needs.resolve-source.outputs.source-repository }}
             org.opencontainers.image.revision=${{ needs.resolve-source.outputs.source-sha }}
           cache-from: type=gha,scope=junos-validate-${{ matrix.architecture }}
           cache-to: type=gha,mode=max,scope=junos-validate-${{ matrix.architecture }}
@@ -73,18 +97,27 @@ jobs:
       - name: Smoke-test Junos MCP runtime
         run: |
           docker run --rm --entrypoint sh "${TEST_IMAGE}" -ec '
+            test "$(id -u)" -ne 0
             python -c "import jnpr.junos, jxmlease, mcp, ncclient, psutil, uvicorn"
+            python -m compileall -q /app
             test -s /app/jmcp.py
+            command -v ssh
+            ssh -V
           '
 
       - name: Scan HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_SHOW_SUPPRESSED: "true"
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
+          version: v0.69.3
           image-ref: ${{ env.TEST_IMAGE }}
+          scanners: vuln
           format: json
           output: trivy-junos-mcp-${{ matrix.architecture }}.json
           severity: HIGH,CRITICAL
           exit-code: "0"
+          trivyignores: junos-mcp-server/.trivyignore.yaml
 
       - name: Upload vulnerability report
         if: always()
@@ -95,11 +128,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Block unaccepted CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          version: v0.69.3
+          skip-setup-trivy: true
+          image-ref: ${{ env.TEST_IMAGE }}
+          scanners: vuln
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          trivyignores: junos-mcp-server/.trivyignore.yaml
+
   publish-platform:
     name: Publish ${{ matrix.platform }} digest
     needs: [resolve-source, validate]
     if: >-
       github.repository == 'Juniper/nita' &&
+      needs.resolve-source.outputs.publishable == 'true' &&
       (github.event_name == 'schedule' ||
        github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && github.ref == 'refs/heads/main'))
@@ -122,9 +168,14 @@ jobs:
       - name: Checkout Junos MCP source
         uses: actions/checkout@v6.0.2
         with:
-          repository: Juniper/junos-mcp-server
+          repository: ${{ needs.resolve-source.outputs.source-repository }}
           ref: ${{ needs.resolve-source.outputs.source-sha }}
           path: junos-mcp-server
+
+      - name: Ensure a vulnerability policy file exists
+        if: hashFiles('junos-mcp-server/.trivyignore.yaml') == ''
+        run: |
+          printf 'vulnerabilities: []\n' > junos-mcp-server/.trivyignore.yaml
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.2.0
@@ -143,7 +194,7 @@ jobs:
           context: junos-mcp-server
           platforms: ${{ matrix.platform }}
           labels: |
-            org.opencontainers.image.source=https://github.com/Juniper/junos-mcp-server
+            org.opencontainers.image.source=https://github.com/${{ needs.resolve-source.outputs.source-repository }}
             org.opencontainers.image.revision=${{ needs.resolve-source.outputs.source-sha }}
             org.opencontainers.image.description=Junos MCP server built for NITA
           outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
@@ -158,18 +209,27 @@ jobs:
         run: |
           docker pull "${PUBLISHED_IMAGE}"
           docker run --rm --entrypoint sh "${PUBLISHED_IMAGE}" -ec '
+            test "$(id -u)" -ne 0
             python -c "import jnpr.junos, jxmlease, mcp, ncclient, psutil, uvicorn"
+            python -m compileall -q /app
             test -s /app/jmcp.py
+            command -v ssh
+            ssh -V
           '
 
       - name: Scan published platform digest
-        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_SHOW_SUPPRESSED: "true"
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
+          version: v0.69.3
           image-ref: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          scanners: vuln
           format: json
           output: trivy-published-junos-mcp-${{ matrix.architecture }}.json
           severity: HIGH,CRITICAL
           exit-code: "0"
+          trivyignores: junos-mcp-server/.trivyignore.yaml
 
       - name: Upload published-digest vulnerability report
         if: always()
@@ -179,6 +239,18 @@ jobs:
           path: trivy-published-junos-mcp-${{ matrix.architecture }}.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Block unaccepted published CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          version: v0.69.3
+          skip-setup-trivy: true
+          image-ref: ${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          scanners: vuln
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          trivyignores: junos-mcp-server/.trivyignore.yaml
 
       - name: Export digest marker
         run: |
@@ -199,6 +271,7 @@ jobs:
     needs: [resolve-source, publish-platform]
     if: >-
       github.repository == 'Juniper/nita' &&
+      needs.resolve-source.outputs.publishable == 'true' &&
       (github.event_name == 'schedule' ||
        github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && github.ref == 'refs/heads/main'))
