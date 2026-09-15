@@ -7,5 +7,6 @@ The following pages are currently available:
 - [nita-cmd](nita-cmd.md). Almost everything you need to know to drive NITA from its command line.
 - [pods](pods.md). Almost everything you need to know about the Kubernetes pods used by NITA.
 - [Containers](containers.md). Almost everything you need to know about the containers used by NITA.
+- [Container security](container-security.md). Supported deployment boundary, vulnerability gates, and exception policy.
 - [Projects](projects.md). What you need to know to create your own projects in NITA.
 - [Nita Examples](nita-examples.md). Overview of existing examples and how to run them in NITA
